@@ -7,7 +7,7 @@ class UserCreate(BaseModel):
     name: str
     email: EmailStr
     password: str
-    phone_number: Optional[str]
+    phone_number: Optional[str] = None
 
 class UserUpdate(BaseModel):
     name: Optional[str] = None
@@ -19,10 +19,11 @@ class UserResponse(BaseModel):
     id: UUID
     name: str
     email: EmailStr
-    phone_number: Optional[str]
+    phone_number: Optional[str] = None
 
     class Config:
         orm_mode = True
+        from_attributes = True
 
 
 # ---------------- Driver Schemas ----------------
@@ -31,6 +32,7 @@ class DriverCreate(BaseModel):
     phone: str
     stand_id: int
     is_available: bool = False
+    password: str
 
 class DriverUpdate(BaseModel):
     name: Optional[str] = None
@@ -80,3 +82,18 @@ class AutoStandResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+# -----------------Token / Auth schemas-------------
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+class TokenData(BaseModel):
+    sub: Optional[str] = None
+    role: Optional[str] = None
+
+# Login schema for drivers (if you want JSON login)
+class DriverLogin(BaseModel):
+    phone: str
+    password: str

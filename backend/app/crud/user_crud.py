@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from app.model import User
 from app.schemas import UserCreate, UserUpdate
+from app.utils.security import hash_password
 from fastapi import HTTPException
 
 # ---------------- Create ----------------
@@ -12,7 +13,7 @@ def create_user(db: Session, user_data: UserCreate):
     new_user = User(
         name=user_data.name,
         email=user_data.email,
-        password=user_data.password  
+        password=hash_password(user_data.password)  
     )
     db.add(new_user)
     db.commit()

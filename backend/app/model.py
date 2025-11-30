@@ -23,6 +23,7 @@ class Driver(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     phone = Column(String, unique=True)
+    password = Column(String, nullable=False)
     is_available = Column(Boolean, default=False)
     stand_id = Column(Integer, ForeignKey("autostands.id"))
     created_at = Column(DateTime, default=datetime.utcnow)

@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from app.model import Driver
 from app.schemas import DriverCreate, DriverUpdate
+from app.utils.security import hash_password
 from fastapi import HTTPException
 
 # ---------------- Create ----------------
@@ -14,7 +15,8 @@ def create_driver(db: Session, driver_data: DriverCreate):
         name=driver_data.name,
         phone=driver_data.phone,
         stand_id=driver_data.stand_id,
-        is_available=driver_data.is_available
+        is_available=driver_data.is_available,
+        password=hash_password(driver_data.password)
     )
 
     db.add(new_driver)
