@@ -5,6 +5,7 @@ from typing import List
 from app.crud import user_crud
 from app.schemas import UserCreate, UserUpdate
 from app.database import get_db
+from app.utils.auth import get_current_user
 
 router = APIRouter(tags=["Users"])
 
@@ -49,3 +50,9 @@ def update_user_endpoint(user_id: int, user_data: UserUpdate, db: Session = Depe
 @router.delete("/{user_id}", response_model=dict)
 def delete_user_endpoint(user_id: int, db: Session = Depends(get_db)):
     return user_crud.delete_user(db, user_id)
+
+
+# ---------------- Test endpoints ----------------
+@router.get("/me", response_model=dict)
+def read_current_user(current_user = Depends(get_current_user)):
+    return {"id": current_user.id, "name": current_user.name, "email": current_user.email}

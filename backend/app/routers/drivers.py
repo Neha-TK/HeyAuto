@@ -5,6 +5,7 @@ from typing import List
 from app.crud import driver_crud
 from app.schemas import DriverCreate, DriverUpdate
 from app.database import get_db
+from app.utils.auth import get_current_driver
 
 router = APIRouter(tags=["Drivers"])
 
@@ -49,3 +50,10 @@ def update_driver_endpoint(driver_id: int, driver_data: DriverUpdate, db: Sessio
 @router.delete("/{driver_id}", response_model=dict)
 def delete_driver_endpoint(driver_id: int, db: Session = Depends(get_db)):
     return driver_crud.delete_driver(db, driver_id)
+
+
+# ---------------- Testing endpoint ----------------
+@router.get("/me", response_model=dict)
+def read_current_driver(current_driver = Depends(get_current_driver)):
+    return {"id": current_driver.id, "name": current_driver.name, "phone": current_driver.phone, "stand_id": current_driver.stand_id}
+
