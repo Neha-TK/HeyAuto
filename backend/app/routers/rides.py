@@ -3,13 +3,20 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.crud import ride_crud
 from app.schemas import RideCreate, RideUpdate, RideResponse
+from app.utils.auth import get_current_user
 
-router = APIRouter()
+router = APIRouter(prefix="/rides", tags=["Rides"])
 
 # ---------------- Create Ride ----------------
 @router.post("/", response_model=RideResponse)
-def create_ride(ride: RideCreate, db: Session = Depends(get_db)):
-    return ride_crud.create_ride(db, ride)
+def create_ride(ride: RideCreate, current_user = Depends(get_current_user), db: Session = Depends(get_db)):
+    # build payload using server-side user id
+    ride_payload = RideCreate(
+        user_id=current_user.id,
+        start_location=ride.start_location,
+        end_location=ride.end_location
+    )
+    return ride_crud.create_ride(db, ride_payload)
 
 # ---------------- Get Ride ----------------
 @router.get("/{ride_id}", response_model=RideResponse)
