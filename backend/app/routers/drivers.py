@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -7,7 +7,7 @@ from app.schemas import DriverCreate, DriverUpdate
 from app.database import get_db
 from app.utils.auth import get_current_driver
 
-router = APIRouter(tags=["Drivers"])
+router = APIRouter(prefix="/drivers", tags=["Drivers"])
 
 # ---------------- Create ----------------
 @router.post("/", response_model=dict)
@@ -41,14 +41,18 @@ def get_driver_by_phone_endpoint(phone: str, db: Session = Depends(get_db)):
 
 # ---------------- Update ----------------
 @router.put("/{driver_id}", response_model=dict)
-def update_driver_endpoint(driver_id: int, driver_data: DriverUpdate, db: Session = Depends(get_db)):
+def update_driver_endpoint(driver_id: int, driver_data: DriverUpdate, current_driver = Depends(get_current_driver), db: Session = Depends(get_db)):
+    if current_driver.id != driver_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed")
     updated_driver = driver_crud.update_driver(db, driver_id, driver_data)
     return {"status": "success", "driver": {"id": updated_driver.id, "name": updated_driver.name, "phone": updated_driver.phone, "stand_id": updated_driver.stand_id, "is_available": updated_driver.is_available}}
 
 
 # ---------------- Delete ----------------
 @router.delete("/{driver_id}", response_model=dict)
-def delete_driver_endpoint(driver_id: int, db: Session = Depends(get_db)):
+def delete_driver_endpoint(driver_id: int, current_driver = Depends(get_current_driver), db: Session = Depends(get_db)):
+    if current_driver.id != driver_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed")
     return driver_crud.delete_driver(db, driver_id)
 
 

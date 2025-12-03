@@ -41,7 +41,9 @@ def get_user_by_email_endpoint(email: str, db: Session = Depends(get_db)):
 
 # ---------------- Update ----------------
 @router.put("/{user_id}", response_model=dict)
-def update_user_endpoint(user_id: int, user_data: UserUpdate, db: Session = Depends(get_db)):
+def update_user_endpoint(user_id: int, user_data: UserUpdate, current_user = Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Not allowed")
     updated_user = user_crud.update_user(db, user_id, user_data)
     return {"status": "success", "user": {"id": updated_user.id, "name": updated_user.name, "email": updated_user.email}}
 
