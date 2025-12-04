@@ -97,3 +97,12 @@ class TokenData(BaseModel):
 class DriverLogin(BaseModel):
     phone: str
     password: str
+
+
+# -----------------Payloads-------------
+class AvailabilityPayload(BaseModel):
+    available: bool
+
+class LocationPayload(BaseModel):
+    lat: float
+    lng: float

@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from app.crud import driver_crud
+from app.schemas import AvailabilityPayload
 from app.schemas import DriverCreate, DriverUpdate
 from app.database import get_db
 from app.utils.auth import get_current_driver
@@ -61,3 +62,14 @@ def delete_driver_endpoint(driver_id: int, current_driver = Depends(get_current_
 def read_current_driver(current_driver = Depends(get_current_driver)):
     return {"id": current_driver.id, "name": current_driver.name, "phone": current_driver.phone, "stand_id": current_driver.stand_id}
 
+
+# @router.post("/me/mark_presence", response_model=dict)
+# def mark_presence(current_driver = Depends(get_current_driver), db: Session = Depends(get_db)):
+#     updated = driver_crud.mark_presence(db, current_driver.id)
+#     return {"status": "success", "driver": {"id": updated.id, "is_present": getattr(updated, "is_present", None), "stand_id": updated.stand_id}}
+
+
+@router.post("/me/set_available", response_model=dict)
+def set_available(payload: AvailabilityPayload, current_driver = Depends(get_current_driver), db: Session = Depends(get_db)):
+    updated = driver_crud.set_availability(db, current_driver.id, payload.available)
+    return {"status": "success", "driver": {"id": updated.id, "is_available": updated.is_available}}

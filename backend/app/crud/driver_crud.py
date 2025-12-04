@@ -1,8 +1,8 @@
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from app.model import Driver
 from app.schemas import DriverCreate, DriverUpdate
 from app.utils.security import hash_password
-from fastapi import HTTPException
 
 # ---------------- Create ----------------
 def create_driver(db: Session, driver_data: DriverCreate):
@@ -64,3 +64,48 @@ def delete_driver(db: Session, driver_id: int):
     db.delete(driver)
     db.commit()
     return {"status": "success", "message": f"Driver {driver_id} deleted"}
+
+
+# # ---------------- Mark Presence ----------------
+# def mark_presence(db: Session, driver_id: int) -> Driver:
+#     """
+#     Mark driver as present at their stand.
+#     Current behaviour (simple):
+#       - ensures driver exists
+#       - sets is_available = False (present but not actively accepting rides)
+#     Later: add an `is_present` boolean + timestamp and optionally add to a stand queue.
+#     """
+#     driver = db.query(Driver).filter(Driver.id == driver_id).first()
+#     if not driver:
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Driver not found")
+
+#     # simple behavior: mark them present by ensuring they are not available by default
+#     driver.is_available = False
+
+#     db.add(driver)
+#     db.commit()
+#     db.refresh(driver)
+#     return driver
+
+
+# ---------------- Set availability ----------------
+def set_availability(db: Session, driver_id: int, available: bool) -> Driver:
+    driver = db.query(Driver).filter(Driver.id == driver_id).first()
+    if not driver:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Driver not found")
+
+    driver.is_available = bool(available)
+    db.add(driver)
+    db.commit()
+    db.refresh(driver)
+    return driver
+
+
+# ---------------- Update location ----------------
+def update_location(db: Session, driver_id: int, lat: float, lng: float) -> Driver:
+    """
+    Currently not implemented because  Driver model doesn't have latitude/longitude columns.
+
+    """
+    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                        detail="Location tracking not implemented. Add latitude/longitude to Driver model and DB migration first.")
