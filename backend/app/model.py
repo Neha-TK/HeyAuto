@@ -57,3 +57,14 @@ class Ride(Base):
     
     user = relationship("User", back_populates="rides")
     driver = relationship("Driver", back_populates="rides")
+
+
+# ---------------- Stand Queue ----------------
+class StandQueue(Base):
+    __tablename__ = "stand_queue"
+
+    id = Column(Integer, primary_key=True, index=True)
+    stand_id = Column(Integer, ForeignKey("autostands.id"), nullable=False)
+    driver_id = Column(Integer, ForeignKey("drivers.id"), nullable=False)
+    joined_at = Column(DateTime, default=datetime.utcnow)
+    status = Column(String, default="waiting")  # waiting, assigned, left
