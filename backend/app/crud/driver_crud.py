@@ -1,11 +1,17 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-from app.model import Driver
+from sqlalchemy.exc import IntegrityError
+from app.model import Driver, AutoStand
 from app.schemas import DriverCreate, DriverUpdate
 from app.utils.security import hash_password
 
 # ---------------- Create ----------------
 def create_driver(db: Session, driver_data: DriverCreate):
+    # check if auto stand exists
+    stand = db.query(AutoStand).filter(AutoStand.id == driver_data.stand_id).first()
+    if not stand:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="AutoStand (stand_id) does not exist")
+    
     # Check if phone exists
     existing_driver = db.query(Driver).filter(Driver.phone == driver_data.phone).first()
     if existing_driver:
@@ -20,7 +26,11 @@ def create_driver(db: Session, driver_data: DriverCreate):
     )
 
     db.add(new_driver)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not create driver (DB integrity error)")
     db.refresh(new_driver)
     return new_driver
 
