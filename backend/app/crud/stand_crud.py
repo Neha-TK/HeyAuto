@@ -1,6 +1,8 @@
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-from app.model import AutoStand
+from sqlalchemy.exc import IntegrityError
+from datetime import datetime
+from app.model import AutoStand, Driver, StandQueue
 from app.schemas import AutoStandCreate, AutoStandUpdate
 
 # ---------------- Create Stand ----------------
@@ -30,3 +32,43 @@ def update_stand(db: Session, stand_id: int, stand_data: AutoStandUpdate):
 # ---------------- List Stands ----------------
 def get_stands(db: Session, skip: int = 0, limit: int = 100):
     return db.query(AutoStand).offset(skip).limit(limit).all()
+
+# ---------------- Add Driver to Queue ----------------
+def add_driver_to_queue(db: Session, stand_id: int, driver_id: int) -> StandQueue:
+    # ensure stand exists
+    stand = db.query(AutoStand).filter(AutoStand.id == stand_id).first()
+    if not stand:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Stand not found")
+
+    # ensure driver exists
+    driver = db.query(Driver).filter(Driver.id == driver_id).first()
+    if not driver:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Driver not found")
+    
+    # ensure driver belongs to this stand
+    if driver.stand_id != stand_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Driver does not belong to this stand"
+        )
+    
+    # check if already in queue and still waiting
+    existing = db.query(StandQueue).filter(StandQueue.driver_id == driver_id, StandQueue.status == "waiting").first()
+    if existing:
+        return existing
+    
+    entry = StandQueue(
+        stand_id=stand_id,
+        driver_id=driver_id,
+        joined_at=datetime.utcnow(),
+        status="waiting"
+    )
+
+    db.add(entry)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not join queue")
+    db.refresh(entry)
+    return entry
