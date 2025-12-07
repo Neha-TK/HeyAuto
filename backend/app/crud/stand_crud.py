@@ -72,3 +72,22 @@ def add_driver_to_queue(db: Session, stand_id: int, driver_id: int) -> StandQueu
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not join queue")
     db.refresh(entry)
     return entry
+
+# ---------------- Remove Driver from Queue ----------------
+def remove_driver_from_queue(db: Session, driver_id: int) -> None:
+    entry = db.query(StandQueue).filter(StandQueue.driver_id == driver_id, StandQueue.status == "waiting").first()
+    if not entry:
+        return None
+    entry.status = "left"
+    db.add(entry)
+    db.commit()
+    db.refresh(entry)
+    return entry
+
+# ---------------- Get Queue ----------------
+def get_queue(db: Session, stand_id: int):
+    entries = (db.query(StandQueue)
+                 .filter(StandQueue.stand_id == stand_id, StandQueue.status == "waiting")
+                 .order_by(StandQueue.joined_at.asc())
+                 .all())
+    return entries
