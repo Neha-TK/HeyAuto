@@ -91,3 +91,18 @@ def get_queue(db: Session, stand_id: int):
                  .order_by(StandQueue.joined_at.asc())
                  .all())
     return entries
+
+# ---------------- Pop Driver ----------------
+def pop_next_driver(db: Session, stand_id: int):
+    # returns the oldest waiting driver and mark it assigned
+    entry = (db.query(StandQueue)
+               .filter(StandQueue.stand_id == stand_id, StandQueue.status == "waiting")
+               .order_by(StandQueue.joined_at.asc())
+               .first())
+    if not entry:
+        return None
+    entry.status = "assigned"
+    db.add(entry)
+    db.commit()
+    db.refresh(entry)
+    return entry

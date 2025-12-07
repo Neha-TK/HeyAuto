@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.crud import stand_crud
@@ -47,3 +47,18 @@ def get_queue(stand_id: int, db: Session = Depends(get_db)):
     entries = stand_crud.get_queue(db, stand_id)
     # return a simple list of driver ids and joined_at
     return [{"id": e.id, "driver_id": e.driver_id, "joined_at": e.joined_at.isoformat()} for e in entries]
+
+# ---------------- Pop Driver ----------------
+@router.post("/{stand_id}/pop", response_model=dict)
+def pop_driver_endpoint(stand_id: int, db: Session = Depends(get_db)):
+    # Pop the next waiting driver for this stand and mark them 'assigned'.
+    entry = stand_crud.pop_next_driver(db, stand_id)
+    if not entry:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No waiting drivers")
+    return {
+        "status": "success",
+        "queue_id": entry.id,
+        "driver_id": entry.driver_id,
+        "joined_at": entry.joined_at.isoformat(),
+        "status_in_queue": entry.status
+    }
