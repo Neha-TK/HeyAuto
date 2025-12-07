@@ -2,6 +2,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.model import Ride, User, Driver
 from app.schemas import RideCreate, RideUpdate
+from app.crud import stand_crud
 from datetime import datetime
 
 # ---------------- Create Ride ----------------
@@ -18,9 +19,21 @@ def create_ride(db: Session, ride: RideCreate):
         status="pending",
         requested_at=datetime.utcnow()
     )
+
     db.add(new_ride)
     db.commit()
     db.refresh(new_ride)
+
+    # Try to auto-assign if stand_id provided
+    if getattr(ride, "stand_id", None):
+        popped = stand_crud.pop_next_driver(db, ride.stand_id)
+        if popped:
+            new_ride.driver_id = popped.driver_id
+            new_ride.status = "accepted"
+            db.add(new_ride)
+            db.commit()
+            db.refresh(new_ride)
+            # TODO: notify driver via websocket/push
     return new_ride
 
 # ---------------- Get Ride by ID ----------------

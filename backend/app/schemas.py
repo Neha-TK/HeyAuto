@@ -48,6 +48,7 @@ class RideCreate(BaseModel):
     user_id: int
     start_location: str
     end_location: str
+    stand_id: Optional[int] = None
 
 class RideUpdate(BaseModel):
     driver_id: Optional[int] = None
