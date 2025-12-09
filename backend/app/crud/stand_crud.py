@@ -1,6 +1,7 @@
 from fastapi import HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from datetime import datetime
 from app.model import AutoStand, Driver, StandQueue
 from app.schemas import AutoStandCreate, AutoStandUpdate
@@ -94,15 +95,44 @@ def get_queue(db: Session, stand_id: int):
 
 # ---------------- Pop Driver ----------------
 def pop_next_driver(db: Session, stand_id: int):
-    # returns the oldest waiting driver and mark it assigned
-    entry = (db.query(StandQueue)
-               .filter(StandQueue.stand_id == stand_id, StandQueue.status == "waiting")
-               .order_by(StandQueue.joined_at.asc())
-               .first())
-    if not entry:
-        return None
-    entry.status = "assigned"
-    db.add(entry)
-    db.commit()
-    db.refresh(entry)
-    return entry
+    """
+    Transaction-safe pop: selects the oldest waiting StandQueue row for the given stand,
+    locks it (FOR UPDATE SKIP LOCKED), marks it as 'assigned' and returns the entry.
+
+    Returns None if no waiting driver exists.
+    """
+
+    # ensure stand exist
+    stand = db.query(AutoStand).filter(AutoStand.id == stand_id).first()
+    if not stand:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Stand not found")
+
+    try:
+        # Use a transaction context so the SELECT FOR UPDATE and update happen atomically.
+        with db.begin():
+            stmt = (
+                select(StandQueue)
+                .where(StandQueue.stand_id == stand_id, StandQueue.status == "waiting")
+                .order_by(StandQueue.joined_at.asc())
+                .with_for_update(skip_locked=True)
+                .limit(1)
+            )
+            result = db.execute(stmt).scalars().first()
+
+            if not result:
+                # no waiting drivers (or all waiting rows locked by other transactions)
+                return None
+
+            # mark as assigned within the same transaction
+            result.status = "assigned"
+            result.assigned_at = datetime.utcnow()
+            db.add(result)
+            # leaving the with db.begin() block will commit --> When the with block ends: If there is NO error → SQLAlchemy runs COMMIT, If there IS an error → SQLAlchemy runs ROLLBACK automatically
+      
+        db.refresh(result)
+        return result
+
+    except SQLAlchemyError as exc:
+        # Rollback handled by the context manager, but we still raise an HTTP error
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail="Database error when popping next driver") from exc
